@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   dispatcher:
     build:
@@ -9,15 +7,20 @@ services:
     depends_on:
       - worker_arith
       - worker_symbolic
-
   worker_arith:
     build:
       context: ./worker_arith
     ports:
       - "8001:8000"
-
   worker_symbolic:
     build:
       context: ./worker_symbolic
     ports:
       - "8002:8000"
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - dispatcher
