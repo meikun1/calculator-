@@ -3,26 +3,25 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^13.5.0",
+    "autoprefixer": "^10.4.21",
+    "framer-motion": "^12.16.0",
+    "postcss": "^8.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "react-icons": "^5.5.0",
+    "react-scripts": "^5.0.1",
+    "tailwindcss": "^4.1.8"
+
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "npx tailwindcss -i ./src/index.css -o ./build/output.css && react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "eject": "react-scripts eject",
+    "tailwind": "npx tailwindcss -i ./src/index.css -o ./build/output.css --watch"
   },
   "browserslist": {
     "production": [

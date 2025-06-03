@@ -1,0 +1,16 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        'premium-indigo': '#4f46e5',
+        'premium-emerald': '#10b981',
+        'premium-gold': '#f59e0b',
+      },
+    },
+  },
+  plugins: [],
+}
