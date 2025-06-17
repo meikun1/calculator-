@@ -1,26 +1,42 @@
 services:
-  dispatcher:
-    build:
-      context: ./dispatcher
-    ports:
-      - "8000:8000"
-    depends_on:
-      - worker_arith
-      - worker_symbolic
-  worker_arith:
-    build:
-      context: ./worker_arith
-    ports:
-      - "8001:8000"
-  worker_symbolic:
-    build:
-      context: ./worker_symbolic
-    ports:
-      - "8002:8000"
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "3000:3000"
+    depends_on:
+      - api
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
     depends_on:
       - dispatcher
+  dispatcher:
+    build: ./dispatcher
+    ports:
+      - "8003:8000"
+    depends_on:
+      - worker_symbolic
+      - worker_image
+  worker_symbolic:
+    build:
+      context: ./worker_symbolic
+      dockerfile: Dockerfile
+    ports:
+      - "8010-8011:8000"
+    deploy:
+      replicas: 2
+  worker_image:
+    build:
+      context: ./worker_image
+      dockerfile: Dockerfile
+    ports:
+      - "8100-8109:8000"  
+    deploy:
+      replicas: 10
+    environment:
+      - IMAGE_SEGMENT_COUNT=10

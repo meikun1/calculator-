@@ -1,15 +1,14 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
-class Task(BaseModel):
-    expression: str
-
-@app.post("/compute")
-def compute(task: Task):
+@app.post("/calculate")
+async def calculate(data: dict):
     try:
-        result = eval(task.expression)
-        return {"result": result}
+        expression = data.get("expression")
+        if not expression:
+            raise HTTPException(status_code=400, detail="Expression missing")
+        result = eval(expression)  # Замените на безопасную альтернативу в продакшене
+        return {"result": str(result)}
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=400, detail=str(e))
