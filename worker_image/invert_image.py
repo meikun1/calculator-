@@ -22,23 +22,24 @@ class SegmentResponse(BaseModel):
 @app.post("/process_segment")
 async def process_segment(request: SegmentRequest) -> SegmentResponse:
     if not request.data:
+        logger.warning("Empty segment data received")
         return SegmentResponse(inverted_data="")
     try:
-        logger.info(f"Processing segment at {request.start_y}")
+        logger.info(f"Decoding segment at {request.start_y}")
         img_data = base64.b64decode(request.data)
         img = Image.open(io.BytesIO(img_data))
         if img.mode != 'RGB':
+            logger.info(f"Converting image at {request.start_y} from {img.mode} to RGB")
             img = img.convert('RGB')
         img_array = np.array(img, dtype=np.uint8)
+        if img_array.size == 0:
+            raise ValueError("Empty image array")
+        logger.info(f"Inverting segment at {request.start_y}, shape: {img_array.shape}")
         inverted_array = 255 - img_array
         inverted_img = Image.fromarray(inverted_array, mode='RGB')
         buffered = io.BytesIO()
         inverted_img.save(buffered, format="JPEG", quality=95)
         return SegmentResponse(inverted_data=base64.b64encode(buffered.getvalue()).decode('utf-8'))
     except Exception as e:
-        logger.error(f"Error processing segment: {e}")
-        return SegmentResponse(inverted_data=f"Error: {str(e)}")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+        logger.error(f"Error processing segment at {request.start_y}: {e}")
+        return SegmentResponse(inverted_data="")

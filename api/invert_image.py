@@ -6,6 +6,7 @@ import io
 import requests
 from typing import List
 import logging
+import sympy
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -50,10 +51,16 @@ def process_segments(segments: List[dict]) -> List[dict]:
             logger.info(f"Sending segment to dispatcher: {segment}")
             response = requests.post("http://dispatcher:8000/process_segment", json=segment, timeout=10)
             response.raise_for_status()
-            inverted_segments.append({"data": response.json()["inverted_data"], "start_y": segment["start_y"], "height": segment["height"]})
+            data = response.json()
+            if "inverted_data" not in data or not data["inverted_data"]:
+                logger.warning(f"No inverted data for segment at {segment['start_y']}")
+                inverted_segments.append({"data": segment["data"], "start_y": segment["start_y"], "height": segment["height"]})
+            else:
+                inverted_segments.append({"data": data["inverted_data"], "start_y": segment["start_y"], "height": segment["height"]})
         except Exception as e:
-            logger.error(f"Error processing segment: {e}")
+            logger.error(f"Error processing segment at {segment['start_y']}: {e}")
             inverted_segments.append({"data": segment["data"], "start_y": segment["start_y"], "height": segment["height"]})
+    logger.info(f"Processed {len(inverted_segments)} segments")
     return inverted_segments
 
 @app.post("/invert_image")
@@ -65,14 +72,15 @@ async def invert_image(request: ImageRequest) -> ImageResponse:
         return ImageResponse(inverted_image=request.image)
 
     inverted_segments = process_segments(segments)
-    if not inverted_segments:
-        logger.error("No inverted segments processed")
-        return ImageResponse(inverted_image=request.image)
+    if not any(segment["data"] != original["data"] for segment, original in zip(inverted_segments, segments)):
+        logger.warning("No segments were inverted, returning original image")
 
     try:
+        logger.info("Assembling inverted image")
         img = Image.new('RGB', (Image.open(io.BytesIO(base64.b64decode(request.image))).size))
         for segment in sorted(inverted_segments, key=lambda x: x["start_y"]):
-            if segment["data"] and not segment["data"].startswith("Error"):
+            if segment["data"]:
+                logger.debug(f"Pasting segment at {segment['start_y']}")
                 segment_img = Image.open(io.BytesIO(base64.b64decode(segment["data"])))
                 img.paste(segment_img, (0, segment["start_y"]))
         buffered = io.BytesIO()
