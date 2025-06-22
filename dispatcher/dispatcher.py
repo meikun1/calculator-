@@ -2,6 +2,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import re
+import logging
+import random
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -18,6 +23,9 @@ def is_symbolic_expression(expression: str) -> bool:
     symbolic_patterns = [r'x', r'sin', r'cos', r'∫', r'sqrt']
     return any(re.search(pattern, expression, re.IGNORECASE) for pattern in symbolic_patterns)
 
+# Используем общий сервис worker_image (Docker Compose автоматически балансирует)
+WORKER_IMAGE_URL = "http://worker_image:8000/process_segment"
+
 @app.post("/calculate")
 async def calculate(data: dict):
     try:
@@ -25,9 +33,7 @@ async def calculate(data: dict):
         if not expression:
             raise HTTPException(status_code=400, detail="Expression missing")
         
-        # Определяем тип выражения
         if is_symbolic_expression(expression):
-            # Отправляем в worker_symbolic
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     "http://worker_symbolic:8000/calculate",
@@ -36,7 +42,6 @@ async def calculate(data: dict):
                 response.raise_for_status()
                 return response.json()
         else:
-            # Отправляем в worker_arith
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     "http://worker_arith:8000/calculate",
@@ -50,3 +55,21 @@ async def calculate(data: dict):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/process_segment")
+async def process_segment(segment: dict):
+    try:
+        logger.info(f"Forwarding segment to {WORKER_IMAGE_URL}")
+        async with httpx.AsyncClient() as client:
+            response = await client.post(WORKER_IMAGE_URL, json=segment, timeout=10)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error forwarding to {WORKER_IMAGE_URL}: {e}")
+        return {"inverted_data": segment["data"]}
+    except httpx.RequestError as e:
+        logger.error(f"Request error forwarding to {WORKER_IMAGE_URL}: {e}")
+        return {"inverted_data": segment["data"]}
+    except Exception as e:
+        logger.error(f"Unexpected error forwarding to {WORKER_IMAGE_URL}: {e}")
+        return {"inverted_data": segment["data"]}
