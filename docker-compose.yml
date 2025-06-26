@@ -1,0 +1,33 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    depends_on:
+      - api
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - dispatcher
+  dispatcher:
+    build: ./dispatcher
+    ports:
+      - "8003:8000"
+    depends_on:
+      - worker_image
+  worker_image:
+    build:
+      context: ./worker_image
+      dockerfile: Dockerfile
+    ports:
+      - "8300-8309:8000"
+    deploy:
+      replicas: 10
+    environment:
+      - IMAGE_SEGMENT_COUNT=10

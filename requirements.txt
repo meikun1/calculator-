@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+httpx
+sympy
+pillow
+numpy
